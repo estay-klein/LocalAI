@@ -1,7 +1,5 @@
-services/mkdocs/docker-compose-mkdocs.yaml
 x-mkdocs: &mkdocs
   build:
-    context: ./services/mkdocs
     dockerfile: Dockerfile
   container_name: mkdocs
   restart: unless-stopped
