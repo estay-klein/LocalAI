@@ -1,7 +1,49 @@
-# This file has been replaced by separate compose files under:
-#   services/openwebui-gpu/docker-compose-openwebui-gpu.yaml
-#   services/comfyui/docker-compose-comfyui.yaml
-#   services/stable-diffusion/docker-compose-stable-diffusion.yaml
-#
-# To use these services, include the relevant file(s) in your COMPOSE_FILE variable in .env
-# or remove them by excluding the corresponding entries.
+x-openwebui-gpu: &openwebui-gpu
+  image: ghcr.io/open-webui/open-webui:latest
+  container_name: openwebui-gpu
+  restart: unless-stopped
+  depends_on:
+    - traefik
+    - ollama-gpu
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+  ports:
+    - "3031:8080"
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  volumes:
+    - ${LOCALAI_DATA:-../../.LocalAI}/services/openwebui-gpu:/app/backend/data
+  labels:
+    traefik.enable: true
+    traefik.http.routers.openwebui-gpu.rule: Host(`open-gpu.localhost`)
+    traefik.http.routers.openwebui-gpu.entrypoints: web, websecure
+    traefik.http.services.openwebui-gpu.loadbalancer.server.port: 8080
+    traefik.http.services.openwebui-gpu.loadbalancer.passhostheader: true
+    traefik.http.services.openwebui-gpu.loadbalancer.responseForwarding.flushInterval: -1
+    traefik.http.routers.openwebui-gpu.middlewares: ia-streaming-gpu
+    traefik.http.middlewares.ia-streaming-gpu.buffering.maxResponseBodyBytes: 0
+    traefik.http.middlewares.ia-streaming-gpu.buffering.maxRequestBodyBytes: 0
+    traefik.http.middlewares.ia-streaming-gpu.buffering.memResponseBodyBytes: 0
+
+services:
+  openwebui-gpu:
+    profiles: ["gpu-nvidia"]
+    <<: *openwebui-gpu
+    environment:
+      - OLLAMA_BASE_URL=http://ollama-gpu:11434
+      - WEBUI_SECRET_KEY=localai
+      - USE_CUDA_DOCKER=true
+      - DEFAULT_MODELS=qwen2.5:1.5b
+      - DEFAULT_LOCALE=en-US
+      - CHECK_UPDATE=false
+      - SHOW_ADMIN_DETAILS=false
+      - ENABLE_IMAGE_GENERATION=true
+      - IMAGE_GENERATION_ENGINE=stable-diffusion
+      - STABLE_DIFFUSION_BASE_URL=http://stable-diffusion:7860
+      - SDWEBUI_BASE_URL=http://stable-diffusion:7860
+      - DEFAULT_IMAGE_MODEL=anything-v5-PrtRE.safetensors
