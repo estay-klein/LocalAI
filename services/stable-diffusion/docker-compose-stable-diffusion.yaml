@@ -1,0 +1,22 @@
+services:
+  stable-diffusion:
+    image: ghcr.io/ai-dock/stable-diffusion-webui:latest-cuda
+    container_name: stable-diffusion
+    profiles: ["gpu-nvidia"]
+    restart: unless-stopped
+    ports:
+      - "7860:7860"
+    environment:
+      - WEB_ENABLE_AUTH=false
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CLI_ARGS=--xformers --medvram-sdxl --api --listen
+    volumes:
+      - ${LOCALAI_DATA:-../../.LocalAI}/models/image:/opt/stable-diffusion-webui/models
+      - ${LOCALAI_DATA:-../../.LocalAI}/services/stable-diffusion/outputs:/opt/stable-diffusion-webui/outputs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
