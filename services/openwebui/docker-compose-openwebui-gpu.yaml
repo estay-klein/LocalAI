@@ -42,8 +42,8 @@ services:
       - CHECK_UPDATE=false
       - SHOW_ADMIN_DETAILS=false
       - ENABLE_IMAGE_GENERATION=true
-      - IMAGE_GENERATION_ENGINE=comfyui
-      - COMFYUI_BASE_URL=http://comfyui:8188
+      - IMAGE_GENERATION_ENGINE=stable-diffusion
+      - STABLE_DIFFUSION_BASE_URL=http://stable-diffusion-webui:7860
       - SDWEBUI_BASE_URL=http://stable-diffusion-webui:7860
       - DEFAULT_IMAGE_MODEL=anything-v5-PrtRE.safetensors
 
