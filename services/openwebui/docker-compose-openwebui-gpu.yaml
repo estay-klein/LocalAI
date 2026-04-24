@@ -29,6 +29,7 @@ x-openwebui-gpu: &openwebui-gpu
     traefik.http.middlewares.ia-streaming-gpu.buffering.maxResponseBodyBytes: 0
     traefik.http.middlewares.ia-streaming-gpu.buffering.maxRequestBodyBytes: 0
     traefik.http.middlewares.ia-streaming-gpu.buffering.memResponseBodyBytes: 0
+
 services:
   openwebui-gpu:
     profiles: ["gpu-nvidia"]
@@ -43,44 +44,50 @@ services:
       - SHOW_ADMIN_DETAILS=false
       - ENABLE_IMAGE_GENERATION=true
       - IMAGE_GENERATION_ENGINE=stable-diffusion
-      - STABLE_DIFFUSION_BASE_URL=http://stable-diffusion-webui:7860
-      - SDWEBUI_BASE_URL=http://stable-diffusion-webui:7860
+      - STABLE_DIFFUSION_BASE_URL=http://stable-diffusion:7860
+      - SDWEBUI_BASE_URL=http://stable-diffusion:7860
       - DEFAULT_IMAGE_MODEL=anything-v5-PrtRE.safetensors
 
+  # --- COMFY UI ---
   comfyui:
-    profiles: ["gpu-nvidia"]
-    image: runpod/comfyui:latest
+    image: ghcr.io/ai-dock/comfyui:latest-cuda
     container_name: comfyui
+    profiles: ["gpu-nvidia"]
     restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
     ports:
       - "8188:8188"
-    volumes:
-      - ${LOCALAI_DATA:-../.LocalAI}/services/comfyui:/workspace
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
-
-  stable-diffusion-webui:
-    profiles: ["gpu-nvidia"]
-    image: runpod/stable-diffusion-webui:latest
-    container_name: stable-diffusion-webui
-    restart: unless-stopped
+      - COMFYUI_FLAGS=--xformers --fp8_base # Optimización para RTX 4060
+    volumes:
+      - ./services/comfyui/models:/opt/ComfyUI/models
+      - ./services/comfyui/output:/opt/ComfyUI/output
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              count: all
+              count: 1
               capabilities: [gpu]
+
+  # --- STABLE DIFFUSION WEBUI (A1111) ---
+  stable-diffusion:
+    image: ghcr.io/ai-dock/stable-diffusion-webui:latest-cuda
+    container_name: stable-diffusion
+    profiles: ["gpu-nvidia"]
+    restart: unless-stopped
     ports:
       - "7860:7860"
-    volumes:
-      - ${LOCALAI_DATA:-../.LocalAI}/services/stable-diffusion-webui:/workspace
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
+      - CLI_ARGS=--xformers --medvram-sdxl --api --listen # medvram es clave para 8GB
+    volumes:
+      - ./services/sd-webui/models:/opt/stable-diffusion-webui/models
+      - ./services/sd-webui/outputs:/opt/stable-diffusion-webui/outputs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
