@@ -1,7 +1,8 @@
+services/mkdocs/docker-compose-mkdocs.yaml
 x-mkdocs: &mkdocs
   build:
-    #context: ../..
-    dockerfile: services/mkdocs/Dockerfile
+    context: ./services/mkdocs
+    dockerfile: Dockerfile
   container_name: mkdocs
   restart: unless-stopped
 
@@ -9,8 +10,8 @@ x-mkdocs: &mkdocs
     - "8001:8000"
 
   volumes:
-    - ../../mkdocs.yml:/docs/mkdocs.yml:rw
-    - ../../docs:/docs/docs:rw
+    - ./mkdocs.yml:/docs/mkdocs.yml:rw
+    - ./docs:/docs/docs:rw
 
   working_dir: /docs
   command: serve -a 0.0.0.0:8000
