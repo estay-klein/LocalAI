@@ -1,11 +1,42 @@
+x-ollama-cpu: &ollama-cpu
+  image: ollama/ollama:latest
+  container_name: ollama-cpu
+  restart: unless-stopped
+  ports:
+    - 11434:11434
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  volumes:
+    - ${LOCALAI_DATA:-../.LocalAI}/services/ollama-cpu:/root/.ollama
+    - ${LOCALAI_DATA:-../.LocalAI}/models/ollama:/root/.ollama/models
+  environment:
+    - GIN_MODE=release
+    - OLLAMA_HOST=0.0.0.0
+    - OLLAMA_ORIGINS=*
+
+x-ollama-cpu-pull: &ollama-cpu-pull
+  image: ollama/ollama:latest
+  container_name: ollama-cpu-pull
+  volumes:
+    - ${LOCALAI_DATA:-../.LocalAI}/services/ollama-cpu:/root/.ollama
+    - ${LOCALAI_DATA:-../.LocalAI}/models/ollama:/root/.ollama/models
+  environment:
+    - OLLAMA_HOST=ollama-cpu:11434
+  entrypoint: /bin/sh
+  command:
+    - "-c"
+    - "sleep 5;
+      echo 'pulling nomic-embed-text'; ollama pull nomic-embed-text;
+      echo 'pulling deepseek-r1:1.5b'; ollama pull deepseek-r1:1.5b;
+      echo 'pulling llama3.2:1b'; ollama pull llama3.2:1b;
+      echo 'pulling llama3.2:3b'; ollama pull llama3.2:3b"
 services:
   ollama-cpu:
     profiles: ["cpu"]
-    image: ollama/ollama:latest
-    container_name: ollama-cpu
-    restart: unless-stopped
-    environment:
-      - OLLAMA_HOST=0.0.0.0:11434
-      - OLLAMA_KEEP_ALIVE=24h
-    volumes:
-      - ${LOCALAI_DATA:-../.LocalAI}/services/ollama-cpu:/root/.ollama
+    <<: *ollama-cpu
+
+  ollama-cpu-pull:
+    profiles: ["cpu"]
+    <<: *ollama-cpu-pull
+    depends_on:
+      - ollama-cpu
