@@ -1,6 +1,6 @@
 services:
   comfyui:
-    image: comfyanonymous/comfyui:latest
+    image: ghcr.io/ai-dock/comfyui:latest-cuda
     container_name: comfyui
     restart: unless-stopped
     profiles:
