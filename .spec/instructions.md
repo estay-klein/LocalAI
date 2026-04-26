@@ -16,13 +16,13 @@
 - **Compose Network Simplification:** Service-level compose files must not declare an explicit shared network. The stack must rely on the default network created by the merged `COMPOSE_FILE` project.
 
 ## 3. Data Persistence & Security
-- **Strict Host Pathing:** All persistent volumes, private information, git-ignored files, `.env` variables, secrets, and keys MUST live completely outside the repository code, specifically in a dedicated directory **sibling to the project root** (not inside the project). This ensures the project remains portable and free of large model files.
-- **Path Standard:** The base path is defined by the environment variable `LOCALAI_DATA`. The default value is `../.LocalAI` (relative to the project root), which resolves to a `.LocalAI` directory sibling to the repository. This path is **independent of the host user's home directory** and works for any user with any username.
-    - *Examples:* `${LOCALAI_DATA}/models` for LLM weights, or `${LOCALAI_DATA}/services/openwebui` for specific service data.
-- **Portability:** The stack is designed to be **user‑agnostic and portable**. By using `LOCALAI_DATA`, the same Docker Compose files can be used by any user on any system without editing absolute paths. Override `LOCALAI_DATA` in a `.env` file to store data elsewhere (e.g., `/opt/localai`). **No giant models should ever reside inside the project directory** – they must be placed under `${LOCALAI_DATA}/models/`. Custom fine‑tuned models for Ollama must be placed in `${LOCALAI_DATA}/models/ollama/` to be accessible by both Ollama CPU and GPU services.
-- **User‑Specific Customization:** Any configuration, data, or scripts that are specific to the user executing the stack (e.g., supervisord program configurations, service‑specific runtime data, user‑uploaded files) must be placed under `${LOCALAI_DATA}/services/<service‑name>/`. The project directory contains only generic, shareable service definitions (Dockerfiles, docker‑compose files, default configurations). This ensures that the project remains clean and portable across different users and environments.
-- **Local Secrets:** Never commit sensitive data to version control. Always maintain `.env.example` templates in the repository for reference.
-
+- **Project‑Local Docker Folder:** All persistent volumes, private information, git‑ignored files, `.env` variables, secrets, and keys MUST live inside a dedicated `docker` folder at the **project root**. This folder must be listed in `.gitignore` so that large model files and sensitive data never enter version control.
+- **Path Standard:** The base path for all persistent data is `./docker/` (relative to the project root). No environment variable is needed – the structure is fixed relative to the repository location.
+    - *Examples:* `./docker/models` for LLM weights, `./docker/services/openwebui` for specific service data.
+    - *Model storage:* Custom fine‑tuned models for Ollama must be placed in `./docker/models/ollama/` to be shared between CPU and GPU variants.
+- **Portability:** The stack is self‑contained; cloning the repository and creating the `docker` directory (or restoring it from a backup) is the only prerequisite. No absolute paths or external environment variables are required for data storage.
+- **User‑Specific Customization:** Any configuration, data, or scripts that are specific to the user executing the stack (e.g., supervisord program configurations, service‑specific runtime data, user‑uploaded files) must be placed under `./docker/services/<service‑name>/`. The project directory contains only generic, shareable service definitions (Dockerfiles, docker‑compose files, default configurations). This ensures that the project remains clean and portable across different users and environments.
+- **Local Secrets:** Never commit sensitive data to version control. Always maintain `.env.example` templates in the repository for reference. The actual `.env` file resides under `./docker/secrets/`.
 
 ## 4. Development Philosophy
 - **Data Sovereignty:** Local-first inference. No external API calls for LLM processing (OpenAI, Anthropic, etc.) unless explicitly requested by the user.
@@ -50,25 +50,19 @@
 - `/scripts/`: Maintenance, setup, and automation bash scripts (must include English summary headers).
 - `/src/`: Core application logic, strictly modularized per the architecture strategy.
 - `/localai/`: **Custom dashboard application** – FastAPI+Jinja2 web app for service monitoring and management (project‑specific code, not a standard image).
+- `/docker/`: **Persistent data root (git‑ignored)**. Contains all models, service‑specific runtime data, and secrets.
 
 ---
 
 ### Implementation Instructions for the Agent:
-> Review this Constitution prior to any code generation. Any proposal utilizing `snap`/`flatpak`, external cloud AI APIs, or languages other than Python/Bash without permission is a direct violation. Ensure all `docker-compose` files are placed in `/services/` and all persistent data targets `${LOCALAI_DATA}/`. For stack composition changes, update `.env` `COMPOSE_FILE` as the authoritative service list. Keep explanatory content in MkDocs/OpenAPI instead of inline comments. Do not proceed until `.spec/tasks.md` accurately reflects the current objective. **After completing a task, update `Readme.md` to reflect the changes and keep the project documentation up‑to‑date.**
+> Review this Constitution prior to any code generation. Any proposal utilizing `snap`/`flatpak`, external cloud AI APIs, or languages other than Python/Bash without permission is a direct violation. Ensure all `docker-compose` files are placed in `/services/` and all persistent data targets `./docker/...`. For stack composition changes, update `.env` `COMPOSE_FILE` as the authoritative service list. Keep explanatory content in MkDocs/OpenAPI instead of inline comments. Do not proceed until `.spec/tasks.md` accurately reflects the current objective. **After completing a task, update `Readme.md` to reflect the changes and keep the project documentation up‑to‑date.**
 
-### Notes on Portability (Added 2026‑04‑19)
-The project now uses the environment variable `LOCALAI_DATA` (default: `../.LocalAI`) to determine where persistent data is stored. This makes the stack **independent of the host user's home directory** and allows easy sharing across different users and systems.
+### Notes on Portability (Updated 2026‑04‑24)
+The project now uses the project‑local `docker/` directory (git‑ignored) for all persistent data. This makes the stack self‑contained and independent of any host‑user home directory.
 
 **Key Principles:**
-- The project must exist in `/home/$user/LocalAI` (or any location) while all persistent volumes reside in a **sibling folder** (`../.LocalAI` by default).
-- **No giant models should ever be placed inside the project directory** – they belong under `${LOCALAI_DATA}/models/`.
-- The stack is **portable** and valid for any user with any username, because paths are relative to the project root.
+- All persistent volumes live inside `./docker/` relative to the project root.
+- The `docker/` folder must be listed in `.gitignore` to prevent large model files and secrets from being committed.
+- The stack is **portable** – clone the repository, create or restore the `docker/` directory, and the same Compose files work without path edits.
+- **No giant models should ever be placed inside the repository** – they belong in `./docker/models/`.
 - The Docker network is named **`LocalAI`** (capitalized) to maintain consistency across the stack.
-
-- To change the data location, create a `.env` file in the project root with:
-  ```
-  LOCALAI_DATA=/your/custom/path
-  ```
-- All service Docker Compose files reference `${LOCALAI_DATA}/...` for volume bindings.
-- The directory structure under `LOCALAI_DATA` mirrors the original `~/.LocalAI/` layout (models/, services/, data/, etc.).
-- This change ensures the stack can be cloned and run by any user without manual path edits.
