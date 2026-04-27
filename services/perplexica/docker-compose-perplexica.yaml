@@ -1,5 +1,5 @@
 x-perplexica: &perplexica
-  image: ghcr.io/itzcrazykns/perplexica:latest
+  image: ghcr.io/itzcrazykns/perplexica:slim-latest
   container_name: perplexica
   restart: unless-stopped
   ports:
