@@ -8,7 +8,7 @@
 ## 2. Architecture Principles
 - **Container‑First:** All services run inside Docker containers orchestrated by Docker Compose.
 - **Micro‑Services:** Each functional unit (LLM inference, UI, database, automation) is a separate, loosely coupled service.
-- **Strict Persistent Data Layout:** All persistent data (models, service state, secrets) MUST reside inside the `.docker` directory at the project root. The directory `.docker/data/services/<service‑name>` is the canonical location for any service‑specific runtime data. The `.docker` directory is **git‑ignored** — it must never be committed to the repository.
+- **Strict Persistent Data Layout:** All persistent data (models, service state, secrets) MUST reside inside the `.localai` directory at the project root. The directory `.localai/data/services/<service‑name>` is the canonical location for any service‑specific runtime data. The `.localai` directory is **git‑ignored** — it must never be committed to the repository.
 - **Supervisord Supervision:** All script execution inside the main application container is managed by `supervisord`.
 - **Spec‑Driven Development:** Every change follows the SDD cycle (read spec → update tasks → implement → commit).
 
@@ -50,14 +50,14 @@
 - The application is built with **FastAPI + Jinja2** and is deployed as a Docker service from a custom `Dockerfile`.
 
 ## 4. Network Topology
-- **Compose Project Network:** Services rely on the default network created by the merged `COMPOSE_FILE` project.
+- **Compose Project Network:** Services rely on the default network created in the core `docker-compose.yaml` file.
 - **Traefik** acts as the single entry point; all external traffic routes through it.
 - **Internal service‑to‑service communication** uses Docker DNS (`service‑name`) on the shared Compose project network.
 - **GPU‑capable services** are placed on the `gpu‑nvidia` Docker profile and require explicit device passthrough.
 - **CPU‑only services** use the `cpu` profile. The stack supports only these two profiles (`cpu` and `gpu‑nvidia`).
 
 ## 5. Data Persistence Layout
-All persistent data lives under `.docker/data/services/` (relative to the project root). The `.docker` directory is **git‑ignored** and never committed.
+All persistent data lives under `.localai/data/services/` (relative to the project root). The `.localai` directory is **git‑ignored** and never committed.
 
 ```
 project‑root/
@@ -90,26 +90,26 @@ project‑root/
             └── <project>/   # Future downloaded repositories
 ```
 
-**Model Storage Note:** All fine‑tuned models for Ollama must be placed under `.docker/data/services/ollama-*` to be accessible by both CPU and GPU Ollama services. The `ollama-*` directories are effectively shared between CPU and GPU variants to avoid duplication and ensure models are available regardless of which profile is active.
+**Model Storage Note:** All models for Ollama must be placed under `.localai/data/services/ollama-*` to be accessible by both CPU and GPU Ollama services. The `ollama-*` directories are effectively shared between CPU and GPU variants to avoid duplication and ensure models are available regardless of which profile is active.
 
-**User‑Specific Customization:** Any configuration, data, or scripts that are specific to the user executing the stack (e.g., supervisord program configurations, service‑specific runtime data, user‑uploaded files) must be placed under `.docker/data/services/<service‑name>/`. The project directory contains only generic, shareable service definitions (Dockerfiles, docker‑compose files, default configurations). This ensures that the project remains clean and portable across different users and environments.
+**User‑Specific Customization:** Any configuration, data, or scripts that are specific to the user executing the stack (e.g., supervisord program configurations, service‑specific runtime data, user‑uploaded files) must be placed under `.localai/data/services/<service‑name>/`. The project directory contains only generic, shareable service definitions (Dockerfiles, docker‑compose files, default configurations). This ensures that the project remains clean and portable across different users and environments.
 
 ## 6. Environment Variables
-All sensitive configuration is stored in `.env` files outside the repository (in `.docker/secrets/`). Each service’s Docker Compose file references these variables via `${VAR_NAME}`. An `.env.example` is kept in the repository for documentation.
+All sensitive configuration is stored in `.env` files outside the repository (in `.localai/secrets/`). Each service’s Docker Compose file references these variables via `${VAR_NAME}`. An `.env.example` is kept in the repository for documentation.
 
 **Key variables:**
-- `COMPOSE_FILE` – canonical stack composition list. This variable must include `docker-compose.yml` plus the selected service compose files under `/services/`. Users should enable or disable services by editing this single line (add/remove file paths separated by `:`), without changing core orchestration files.
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` – credentials for the PostgreSQL service.
 - `TIMESCALEDB_DB`, `TIMESCALEDB_USER`, `TIMESCALEDB_PASSWORD` – credentials for the TimescaleDB service.
 - `PGVECTOR_DB`, `PGVECTOR_USER`, `PGVECTOR_PASSWORD` – credentials for the pgvector service.
+- An so on, every variable for every service must have its own section in the `.env` file
 
-**No variable** is needed for the root persistent path; the stack always places data under `.docker/data/services/`. The `.docker` folder is created automatically when services start and **must be added to `.gitignore`**.
+**No variable** is needed for the root persistent path; the stack always places data under `.localai/data/services/`. The `.localai` folder is created automatically when services start and **must be added to `.gitignore`**.
 
 ## 7. Supervisord Configuration
 - **Container:** `supervisord` (built from `/services/supervisord/Dockerfile.supervisord`)
 - **Role:** Hosts all Python/Bash scripts that implement business logic, agent workflows, and automation.
 - **Supervisord Web GUI:** Enabled on port 9001 inside the container, exposed via Traefik at `supervisord.localhost`.
-- **Unified Python Environment:** All scripts share a single virtual environment managed by `poetry` or `pipenv`.
+- **Unified Python Environment:** All scripts share a single virtual environment managed by `poetry` or `pipenv`. And scripts are configured and runned by supervisord and visible with the monitor.
 - **Process Groups:** Each logical unit (e.g., `agent‑llm`, `data‑pipeline`, `monitoring`) is a separate supervisord group.
 - **Monitoring companion:** A lightweight web UI (`supervisord‑monitor`) is deployed in the same Compose file (`services/supervisord/docker-compose-supervisord.yaml`) to provide additional oversight of the supervisor process itself.
 
@@ -117,7 +117,7 @@ All sensitive configuration is stored in `.env` files outside the repository (in
 1. **Spec‑Driven Development:**
    - Read `.spec/spec.md` for architectural constraints.
    - Update `.spec/tasks.md` with the new task.
-   - Implement changes in the appropriate directory (`/services/`, `/src/`, `/scripts/`).
+   - Implement changes in the appropriate directory.
    - Verify changes work in the local Docker environment.
    - Commit with a conventional‑commit message.
 2. **Local Deployment:**
@@ -127,7 +127,7 @@ All sensitive configuration is stored in `.env` files outside the repository (in
 3. **Production Considerations:**
    - Use Traefik middlewares for authentication, rate limiting, and SSL.
    - Ensure GPU‑capable hosts have the NVIDIA Container Toolkit installed.
-   - Backup the `.docker` directory regularly.
+   - Backup the `.localai` directory regularly.
 
 ## 9. Technology Stack
 - **Orchestration:** Docker Compose (v2+)
@@ -193,19 +193,3 @@ This folder is git‑ignored and serves as a staging area for scripted interacti
 
 ---
 
-*This specification is a living document. Update it whenever architectural decisions change.*
-
-### Recent Changes (2026‑04‑20)
-- **Persistent data location** changed to `.docker/data/services/<service>`; `.docker` is git‑ignored.
-- **Qdrant service removed** from the service matrix and all references.
-- **LocalAI definition updated** to describe the dashboard/workspace canvas (FastAPI + Jinja2).
-- **Supervisord‑monitor service** added to `services/supervisord/docker-compose-supervisord.yaml` and the service matrix.
-- **`.repo` directory** defined for future repository downloads.
-- **Path principles reinforced**: project lives in `/home/$user/LocalAI`, all persistent data inside `.docker` (never in project directory).
-- **Network name standardized** to `LocalAI` (capitalized) in `docker-compose.yml` and spec.
-- **Active variables removed** from `.env` (USER, PASS, MAIL, POSTGRES_*) as they are not currently used.
-- **Enhanced portability clarity** in `.spec/` documents.
-- **User‑specific customization clarified**: any user‑specific configuration, data, or scripts must be placed under `.docker/data/services/<service‑name>/`, keeping the project directory clean and portable.
-- **COMPOSE_FILE approach implemented**: Added `COMPOSE_FILE` variable in `.env` to merge service files, ensuring relative paths resolve correctly from project root.
-- **Model storage path updated**: models now stored in `.docker/data/services/ollama-*` (outside project).
-- **Redis and supervisord profiles removed**: clarified that only `cpu` and `gpu-nvidia` profiles exist in the stack.
