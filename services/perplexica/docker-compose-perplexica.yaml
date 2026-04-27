@@ -1,11 +1,11 @@
 x-perplexica: &perplexica
-  image: ghcr.io/itzcrazykns/perplexica:slim-latest
+  image: itzcrazykns1337/perplexica:slim-latest
   container_name: perplexica
   restart: unless-stopped
   ports:
     - "3004:3004"
   volumes:
-    - ../../.docker/data/services/perplexica:/app/data
+    - ../../.localai/data/services/perplexica:/app/data
   environment:
     - SEARXNG_URL=http://searxng:8080
   depends_on:

@@ -11,8 +11,8 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - CLI_ARGS=--xformers --medvram-sdxl --api --listen
     volumes:
-      - ${LOCALAI_DATA:-../../.LocalAI}/models/image:/opt/stable-diffusion-webui/models
-      - ${LOCALAI_DATA:-../../.LocalAI}/services/stable-diffusion/outputs:/opt/stable-diffusion-webui/outputs
+      - ../../.services/stable-diffusion/models/:/opt/stable-diffusion-webui/models
+      - ../../.services/stable-diffusion/outputs:/opt/stable-diffusion-webui/outputs
     deploy:
       resources:
         reservations:

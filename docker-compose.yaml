@@ -21,7 +21,7 @@ include:
   - services/flowise/docker-compose-flowise.yaml
   - services/langflow/docker-compose-langflow.yaml
   - services/jupyterhub/docker-compose-jupyterhub.yaml
-  - services/localai/docker-compose-localai.yaml
+  #- services/localai/docker-compose-localai.yaml
   - services/swagger-ui/docker-compose-swagger-ui.yaml
   - services/browseruse/docker-compose-browseruse.yaml
   - services/perplexica/docker-compose-perplexica.yaml

@@ -18,8 +18,8 @@ services:
       NVIDIA_VISIBLE_DEVICES: all
       NVIDIA_DRIVER_CAPABILITIES: compute,utility
     volumes:
-      - ./docker/models/stable-diffusion:/models
-      - ./docker/services/comfyui:/workspace
+      - ../../.localai/data/models/stable-diffusion:/models
+      - ../../.localai/data/services/comfyui:/workspace
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.comfyui.rule=Host(`comfyui.localhost`)"
