@@ -7,7 +7,8 @@ x-supervisord: &supervisord
   restart: unless-stopped
   volumes:
     - ../../src:/app/src:ro
-    - ../../.docker/data/services/supervisord:/app/data:rw
+    - ../../.localai/data/services/supervisord:/app/data:rw
+    - ../../.localai/data/venv:/opt/venv
     - ../../services/supervisord/supervisord.conf:/etc/supervisor/supervisord.conf:ro
     - ./conf.d:/etc/supervisor/conf.d:ro
   environment:

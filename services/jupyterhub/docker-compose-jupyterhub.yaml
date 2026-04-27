@@ -2,10 +2,21 @@ x-jupyterhub: &jupyterhub
   image: jupyterhub/jupyterhub:latest
   container_name: jupyterhub
   restart: unless-stopped
+  depends_on:
+    - supervisord
   ports:
     - "8002:8000"
   volumes:
     - ../../.localai/data/services/jupyterhub:/srv/jupyterhub
+    - ../../.localai/data/venv:/opt/venv
+  environment:
+    - VIRTUAL_ENV=/opt/venv
+    - PATH=/opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  entrypoint: [ "/bin/sh", "-c" ]
+  command: >
+    while [ ! -f /opt/venv/bin/python ]; do sleep 1; done;
+    /opt/venv/bin/python -m ipykernel install --name shared-venv --display-name 'Shared Python (venv)' --prefix=/usr/local;
+    exec jupyterhub
   labels:
     traefik.enable: true
     traefik.http.routers.jupyterhub.rule: Host(`jupyterhub.localhost`)

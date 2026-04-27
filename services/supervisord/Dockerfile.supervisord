@@ -17,8 +17,19 @@ COPY services/supervisord/supervisord.conf /etc/supervisor/supervisord.conf
 COPY . /app
 
 WORKDIR /app
-RUN if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; fi
+
+RUN printf '#!/bin/sh\n\
+if [ ! -f /opt/venv/bin/python ]; then\n\
+  python -m venv /opt/venv\n\
+  /opt/venv/bin/pip install --no-cache-dir -r /app/requirements.txt\n\
+  /opt/venv/bin/pip install --no-cache-dir ipykernel\n\
+fi\n\
+export VIRTUAL_ENV=/opt/venv\n\
+export PATH="/opt/venv/bin:$PATH"\n\
+exec "$@"\n' > /usr/local/bin/entrypoint-venv.sh \
+ && chmod +x /usr/local/bin/entrypoint-venv.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint-venv.sh"]
+CMD ["supervisord", "-c", "/etc/supervisor/supervisord.conf"]
 
 EXPOSE 9001
-
-CMD ["supervisord", "-c", "/etc/supervisor/supervisord.conf"]
