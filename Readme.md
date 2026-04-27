@@ -9,7 +9,7 @@ The stack is built around **Docker Compose** micro‑services, each running in i
 Key architectural principles:
 
 - **Container‑First:** All services run inside Docker containers.
-- **Persistent Data:** All runtime data lives inside the `.docker/data/services/` directory, which is git‑ignored. No environment variable is needed — the stack always uses this fixed path.
+- **Persistent Data:** All runtime data lives inside the `.localai/data/services/` directory, which is git‑ignored. No environment variable is needed — the stack always uses this fixed path.
 - **Supervisord Supervision:** All application scripts are managed by `supervisord` inside a dedicated container.
 - **Spec‑Driven Development:** Every change follows the SDD cycle (read spec → update tasks → implement → commit).
 
@@ -31,7 +31,7 @@ Key architectural principles:
 ├── assets/                   # Static assets (logos, etc.)
 ├── docs/                     # MkDocs documentation source
 ├── mkdocs.yml                # Material for MkDocs configuration
-├── .docker/                  # Runtime persistent data (git‑ignored)
+├── .localai/                 # Runtime persistent data (git‑ignored)
 ├── .repo/                    # External repository cache (git‑ignored)
 └── docker‑compose.yml        # Root composition that includes all services
 ```
@@ -54,7 +54,7 @@ Key architectural principles:
 
 2. **Create the host data directories** (optional – they will be created automatically on first run):
    ```bash
-   mkdir -p .docker/data/services
+   mkdir -p .localai/data/services
    ```
 
 3. **Start the services** (this will pull images and start containers):
@@ -76,18 +76,19 @@ Key architectural principles:
 | Service | Role | Image | Port | Host Data Path |
 |---------|------|-------|------|----------------|
 | traefik | Reverse Proxy | `traefik:latest` | 80, 443 | – |
-| ollama‑cpu | LLM Inference (CPU) | `ollama/ollama` | 11434 | ./.docker/data/services/ollama |
-| ollama‑gpu | LLM Inference (GPU) | `ollama/ollama` | 11435 | ./.docker/data/services/ollama |
-| openwebui‑cpu | Web UI (CPU) | `ghcr.io/open‑webui/open‑webui:main` | 3030 | ./.docker/data/services/openwebui‑cpu |
-| openwebui‑gpu | Web UI (GPU) | `ghcr.io/open‑webui/open‑webui:main` | 3031 | ./.docker/data/services/openwebui‑gpu |
-| supervisord | Process Supervisor | Custom (services/supervisord/Dockerfile.supervisord) | 9001 | ./.docker/data/services/supervisord |
+| ollama‑cpu | LLM Inference (CPU) | `ollama/ollama` | 11434 | .localai/data/services/ollama‑cpu |
+| ollama‑gpu | LLM Inference (GPU) | `ollama/ollama` | 11435 | .localai/data/services/ollama‑gpu |
+| openwebui‑cpu | Web UI (CPU) | `ghcr.io/open‑webui/open‑webui:main` | 3030 | .localai/data/services/openwebui‑cpu |
+| openwebui‑gpu | Web UI (GPU) | `ghcr.io/open‑webui/open‑webui:main` | 3031 | .localai/data/services/openwebui‑gpu |
+| supervisord | Process Supervisor | Custom (services/supervisord/Dockerfile.supervisord) | 9001 | .localai/data/services/supervisord |
 | supervisord‑monitor | Supervisor Web UI Monitoring | `dockage/supervisor‑web:2.2.0` | 80 | – |
-| localai | LocalAI Dashboard & Workspace Canvas | Custom (localai) | 8081 | ./.docker/data/services/localai |
-| postgres | Relational Database | `postgres:16` | 5432 | ./.docker/data/services/postgres |
-| timescaledb | Time‑Series Database | `timescale/timescaledb:latest-pg16` | 5433 | ./.docker/data/services/timescaledb |
-| pgvector | Vector‑Enabled PostgreSQL | `pgvector/pgvector:pg16` | 5434 | ./.docker/data/services/pgvector |
-| mkdocs | Documentation Site (Material for MkDocs) | `squidfunk/mkdocs-material:latest` | 8001 | `./docs`, `./mkdocs.yml` |
-| redis | In‑Memory Cache | `redis:7‑alpine` | 6379 | ./.docker/data/services/redis |
+| localai | LocalAI Dashboard & Workspace Canvas | Custom (localai) | 8081 | .localai/data/services/localai |
+| postgres | Relational Database | `postgres:16` | 5432 | .localai/data/services/postgres |
+| timescaledb | Time‑Series Database | `timescale/timescaledb:latest-pg16` | 5433 | .localai/data/services/timescaledb |
+| pgvector | Vector‑Enabled PostgreSQL | `pgvector/pgvector:pg16` | 5434 | .localai/data/services/pgvector |
+| mkdocs | Documentation Site (Material for MkDocs) | Custom build (`services/mkdocs/Dockerfile`) | 8003 | `./docs`, `./mkdocs.yml` |
+| jupyterhub | Jupyter Notebooks | `jupyterhub/jupyterhub:latest` | 8002 | .localai/data/services/jupyterhub |
+| redis | In‑Memory Cache | `redis:7‑alpine` | 6379 | .localai/data/services/redis |
 
 > **Note:** Service activation is controlled by `.env` → `COMPOSE_FILE`. Add or remove service compose files in that single line (colon-separated) to customize the stack for your environment.
 
@@ -114,7 +115,7 @@ The stack includes a **Material for MkDocs** service to maintain full project do
 - Config file: `mkdocs.yml`
 - Docs content: `docs/`
 - Access URLs:
-  - `http://localhost:8001`
+  - `http://localhost:8003`
   - `http://mkdocs.localhost` (when Traefik is enabled)
 
 ### Swagger UI + MkDocs Integration
@@ -147,10 +148,10 @@ All scripts that implement business logic must be placed under `/scripts/` (for 
 
 ## 🔐 Security & Data Persistence
 
-- **Secrets** are stored in `.docker/secrets/` (git‑ignored).
+- **Secrets** are stored in `.localai/secrets/` (git‑ignored).
 - **Environment variables** are defined in `.env` (git‑ignored) with an `.env.example` template.
-- **Model weights** and other large files reside in `.docker/data/services/ollama` (and other service directories under `.docker/data/services/`).
-- **Service‑specific data** (databases, configuration) is kept in `.docker/data/services/<service‑name>/`.
+- **Model weights** and other large files reside in `.localai/data/services/ollama-*`.
+- **Service‑specific data** (databases, configuration) is kept in `.localai/data/services/<service‑name>/`.
 
 ## 📄 License
 
